@@ -1,0 +1,9 @@
+<map id="ad74413r_desc" name="ad74413r_desc">
+<area shape="rect" id="node1" title="AD74413r device descriptor." alt="" coords="401,273,521,300"/>
+<area shape="rect" id="node2" href="$structno__os__spi__desc.html" title="Structure holding SPI descriptor." alt="" coords="177,184,300,211"/>
+<area shape="rect" id="node3" href="$structno__os__spi__platform__ops.html" title="Structure holding SPI function pointers that point to the platform specific function." alt="" coords="5,5,184,32"/>
+<area shape="rect" id="node4" href="$structno__os__spibus__desc.html" title="SPI bus descriptor." alt="" coords="188,95,335,121"/>
+<area shape="rect" id="node5" href="$structno__os__gpio__desc.html" title="Structure holding the GPIO descriptor." alt="" coords="395,184,527,211"/>
+<area shape="rect" id="node6" href="$structno__os__gpio__platform__ops.html" title="Structure holding gpio function pointers that point to the platform specific function." alt="" coords="367,95,555,121"/>
+<area shape="rect" id="node7" href="$structad74413r__channel__config.html" title="Device channel state." alt="" coords="552,184,739,211"/>
+</map>

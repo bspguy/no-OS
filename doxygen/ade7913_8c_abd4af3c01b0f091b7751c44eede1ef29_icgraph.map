@@ -1,0 +1,6 @@
+<map id="ade7913_set_stream_dbg_mode" name="ade7913_set_stream_dbg_mode">
+<area shape="rect" id="node1" title="Set STREAM_DBG mode." alt="" coords="319,49,477,90"/>
+<area shape="rect" id="node2" href="$ade7913_8h.html#a0aa89a41a9463b90ee29a3eaad97a863" title="Set data increments mode of operation." alt="" coords="5,5,271,32"/>
+<area shape="rect" id="node3" href="$ade7913_8h.html#a9317f9ad6f63e9ec2a0561956c2e4e9b" title="Set normal mode of operation." alt="" coords="37,56,239,83"/>
+<area shape="rect" id="node4" href="$ade7913_8h.html#a3fb088b47428d60d68f1e04db21751c5" title="Set static mode of operation." alt="" coords="42,107,234,133"/>
+</map>

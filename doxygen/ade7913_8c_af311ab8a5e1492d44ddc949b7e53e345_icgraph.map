@@ -1,0 +1,27 @@
+<map id="ade7913_write" name="ade7913_write">
+<area shape="rect" id="node1" title="Write device register." alt="" coords="288,723,407,750"/>
+<area shape="rect" id="node2" href="$ade7913_8h.html#af2bc2c05f4342be6b1e79fee61ed822c" title="Clear the ADC_SYNC_DONE int mask." alt="" coords="31,5,215,47"/>
+<area shape="rect" id="node3" href="$ade7913_8h.html#aea4efe513ea6d5cd19aa0ac446dbfd68" title="Clear the COM_UP int mask." alt="" coords="23,71,222,98"/>
+<area shape="rect" id="node4" href="$ade7913_8h.html#aa96c4d6cf96c3f75e4f949fb05c2064d" title="Clear the COMFLT_ERR int mask." alt="" coords="40,123,205,164"/>
+<area shape="rect" id="node5" href="$ade7913_8h.html#a3c16dfc1112ad7133c649df586ae38e3" title="Clear the CRC_CHG int mask." alt="" coords="24,189,221,215"/>
+<area shape="rect" id="node6" href="$ade7913_8h.html#a31f30b9736d043778b39a85de178baae" title="Clear the CRC_DONE int mask." alt="" coords="19,239,226,266"/>
+<area shape="rect" id="node7" href="$ade7913_8h.html#a75dd094eac7353c7be6b98854402487e" title="Clear the I_WAV_OVRNG int mask." alt="" coords="41,291,204,332"/>
+<area shape="rect" id="node8" href="$ade7913_8h.html#ade6d2dcdbc4e54766973734e5d70801b" title="Clear the ISO_CLK_STBL_ERR int mask." alt="" coords="38,356,207,397"/>
+<area shape="rect" id="node9" href="$ade7913_8h.html#aee9fe02844a0e92036cf96855651f35c" title="Clear the ISO_DIG_MOD_I_OVF int mask." alt="" coords="37,421,208,463"/>
+<area shape="rect" id="node10" href="$ade7913_8h.html#ac207704f9989d46740f5562bc4f2c8bf" title="Clear the ISO_DIG_MOD_V1_OVF int mask." alt="" coords="37,487,208,528"/>
+<area shape="rect" id="node11" href="$ade7913_8h.html#aac74c7a81a2ae0be232618642c8337c0" title="Clear the ISO_DIG_MOD_V2_OVF int mask." alt="" coords="37,552,208,593"/>
+<area shape="rect" id="node12" href="$ade7913_8h.html#ad0486bc0690033e1cc3272822b2ad885" title="Clear the ISO_EFUSE_MEM_ERR int mask." alt="" coords="29,617,216,659"/>
+<area shape="rect" id="node13" href="$ade7913_8h.html#af654c2ebc49e12b9609b523165e66a62" title="Clear the ISO_PHY_CRC_ERR int mask." alt="" coords="35,683,210,724"/>
+<area shape="rect" id="node14" href="$ade7913_8h.html#a7fde63d74d35fc09fa9ff78dcc4ea80d" title="Clear the ISO_TEST_MMR_ERR int mask." alt="" coords="35,748,210,789"/>
+<area shape="rect" id="node15" href="$ade7913_8h.html#aa4503dee3a8ae5bfca2c7e0c2b54d64c" title="Clear the RESET_DONE int mask." alt="" coords="44,813,201,855"/>
+<area shape="rect" id="node16" href="$ade7913_8h.html#afe9b6be16a5a6822c4f791ae19a799a7" title="Clear the SPI_CRC_ERR int mask." alt="" coords="38,879,207,920"/>
+<area shape="rect" id="node17" href="$ade7913_8h.html#aa13623af54d90e00367153c866ea8978" title="Clear the V1_WAV_OVRNG int mask." alt="" coords="35,944,210,985"/>
+<area shape="rect" id="node18" href="$ade7913_8h.html#af35a28cbbc45ddd5ffbe8d51fcced4ce" title="Clear the V2_WAV_OVRNG int mask." alt="" coords="35,1009,210,1051"/>
+<area shape="rect" id="node19" href="$ade7913_8h.html#a72ce1ddd4c4f8f9102d80ab25e680ee4" title="Force background register map CRC recalculation." alt="" coords="5,1075,240,1102"/>
+<area shape="rect" id="node20" href="$ade7913_8h.html#af8b7c23a1000bacc350632357e8a8ec7" title="Set EMI HI mask." alt="" coords="23,1126,222,1153"/>
+<area shape="rect" id="node21" href="$ade7913_8h.html#a24fa526da1e76318e2db3d56926fc773" title="Set EMI LO mask." alt="" coords="23,1177,222,1203"/>
+<area shape="rect" id="node22" href="$ade7913_8h.html#a6a672f051e655d14cd926576faf98f99" title="Reset the device using SW reset." alt="" coords="51,1227,194,1254"/>
+<area shape="rect" id="node23" href="$ade7913_8h.html#a0f7db5e49df1285160e0124f6fe03d40" title="Lock device." alt="" coords="55,1278,190,1305"/>
+<area shape="rect" id="node24" href="$ade7913_8h.html#acb195dfa437803cb18f90e4b3cf2f852" title="Unlock device." alt="" coords="47,1329,198,1355"/>
+<area shape="rect" id="node25" href="$ade7913_8h.html#a57de5ac4cc84f76148c5ae8851ded93d" title="Write value in the scratchpad register." alt="" coords="25,1379,221,1406"/>
+</map>

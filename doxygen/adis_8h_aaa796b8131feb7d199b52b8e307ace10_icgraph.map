@@ -1,0 +1,5 @@
+<map id="adis_write_burst_sel" name="adis_write_burst_sel">
+<area shape="rect" id="node1" title="Write burst selection encoded value." alt="" coords="215,31,369,57"/>
+<area shape="rect" id="node2" href="$iio__adis_8h.html#a7c6f3c09bd105d1251188d1b52d7cf27" title="API to be called before trigger is enabled." alt="" coords="11,5,161,32"/>
+<area shape="rect" id="node3" href="$adis_8h.html#acc1361fbe481da1d1887598390fa5bc7" title="Read burst data." alt="" coords="5,56,167,83"/>
+</map>

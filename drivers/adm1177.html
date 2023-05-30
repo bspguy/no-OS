@@ -1,0 +1,335 @@
+
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+    <title>ADM1177 no-OS Driver &#8212; no-OS  documentation</title>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/alabaster.css" />
+    <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
+    <script src="../_static/jquery.js"></script>
+    <script src="../_static/underscore.js"></script>
+    <script src="../_static/doctools.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="MAX149X6 no-OS driver" href="max149x6.html" />
+    <link rel="prev" title="ADXL355 no-OS driver" href="adxl355.html" />
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="adm1177-no-os-driver">
+<h1>ADM1177 no-OS Driver<a class="headerlink" href="#adm1177-no-os-driver" title="Permalink to this headline">¶</a></h1>
+<section id="supported-devices">
+<h2>Supported Devices<a class="headerlink" href="#supported-devices" title="Permalink to this headline">¶</a></h2>
+<p><a class="reference external" href="https://www.analog.com/ADM1177">ADM1177</a></p>
+</section>
+<section id="overview">
+<h2>Overview<a class="headerlink" href="#overview" title="Permalink to this headline">¶</a></h2>
+<p>The ADM1177 is an integrated hot swap controller that offers digital current
+and voltage monitorng via an on-chip, 12 bit analog-to-digital converter (ADC),
+communicated through an I2C interface.</p>
+<p>The 12 bit ADC can measure the current seen in the sense resistor, as well as
+the supply voltage on the VCC pin. Measurements can be initiated by an I2C
+command.</p>
+</section>
+<section id="applications">
+<h2>Applications<a class="headerlink" href="#applications" title="Permalink to this headline">¶</a></h2>
+<ul class="simple">
+<li><p>Power monitoring/power budgeting</p></li>
+<li><p>Central office equipment</p></li>
+<li><p>Telecommunications and data communications equipment PCs/servers</p></li>
+</ul>
+</section>
+<section id="adm1177-device-configuration">
+<h2>ADM1177 Device Configuration<a class="headerlink" href="#adm1177-device-configuration" title="Permalink to this headline">¶</a></h2>
+</section>
+<section id="driver-initialization">
+<h2>Driver Initialization<a class="headerlink" href="#driver-initialization" title="Permalink to this headline">¶</a></h2>
+<p>In order to be able to use the device, you will have to provide the support for
+the communication protocol (I2C) as mentioned above.</p>
+<p>The first API to be called is <strong>adm1177_init</strong>. Make sure that it returns 0,
+which means that the driver was initialized correctly.</p>
+</section>
+<section id="range-configuration">
+<h2>Range Configuration<a class="headerlink" href="#range-configuration" title="Permalink to this headline">¶</a></h2>
+<p>By default, the device uses 26.35V range configuration. You may modify this
+value to 6.65V by using <strong>adm1177_set_vrange</strong> API.</p>
+</section>
+<section id="adm1177-device-measurements">
+<h2>ADM1177 Device Measurements<a class="headerlink" href="#adm1177-device-measurements" title="Permalink to this headline">¶</a></h2>
+</section>
+<section id="write-operation">
+<h2>Write Operation<a class="headerlink" href="#write-operation" title="Permalink to this headline">¶</a></h2>
+<p>In order to communicate to the ADC what data you want to read, you will need to
+call the <strong>adm1177_write</strong> API, and at the reg_address put 0 so you will perform
+a write command operation.</p>
+<p>If you want to perform a write extended command operation, you will need to call
+the same API but at the reg_address put the specific register address
+corresponding to the extended command you want to perform.</p>
+</section>
+<section id="status-read">
+<h2>Status Read<a class="headerlink" href="#status-read" title="Permalink to this headline">¶</a></h2>
+<p>In order to read the status, after you used the <strong>adm1177_write</strong> API, with the
+command corresponding to the Status Reading Operation, you will need to call
+the <strong>adm1177_read_status</strong> API and a status_byte will be returned through the
+status_byte pointer.</p>
+</section>
+<section id="conversion-data">
+<h2>Conversion Data<a class="headerlink" href="#conversion-data" title="Permalink to this headline">¶</a></h2>
+<p>In order to read the Current, Voltage or Both data form the ADC, after you used
+the <strong>adm1177_write</strong> API to tell the ADC you need Voltage, Current or Both,
+use the <strong>adm1177_read_conv</strong> API, and voltage and current data will be received
+through conv_voltage and conv_current pointers.</p>
+</section>
+<section id="raw-sample-to-true-value">
+<h2>Raw Sample to True value<a class="headerlink" href="#raw-sample-to-true-value" title="Permalink to this headline">¶</a></h2>
+<p>If you want the raw data received from the ADC through the previously mentioned
+pointers converted to real-life values, use the <strong>adm1177_to_microvolts</strong> API
+for voltage and <strong>adm1177_to_microampers</strong> API for current.</p>
+</section>
+<section id="adm1177-driver-initialization-example">
+<h2>ADM1177 Driver Initialization Example<a class="headerlink" href="#adm1177-driver-initialization-example" title="Permalink to this headline">¶</a></h2>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>struct adm1177_dev *adm1177<span class="p">;</span>
+//Particular I2C Configuration
+struct adm1177_init_param <span class="nv">adm1177_ip</span> <span class="o">=</span> <span class="o">{</span>
+        .i2c_init <span class="o">=</span> <span class="o">{</span>
+                .device_id <span class="o">=</span> I2C_DEVICE_ID,
+                .slave_address <span class="o">=</span> ADM1177_ADDRESS,
+                .extra <span class="o">=</span> I2C_EXTRA,
+                .platform_ops <span class="o">=</span> I2C_OPS,
+                .max_speed_hz <span class="o">=</span> <span class="m">100000</span>,
+        <span class="o">}</span>,
+<span class="o">}</span><span class="p">;</span>
+uint8_t status_byte<span class="p">;</span>
+uint16_t conv_voltage, conv_current<span class="p">;</span>
+uint64_t voltage, current<span class="p">;</span>
+
+<span class="nv">ret</span> <span class="o">=</span> adm1177_init<span class="o">(</span><span class="p">&amp;</span>adm1177, <span class="p">&amp;</span>adm1177_ip<span class="o">)</span><span class="p">;</span>
+<span class="k">if</span><span class="o">(</span>ret<span class="o">)</span>
+        goto error<span class="p">;</span>
+
+// Initialize the continuous voltage and crurrent readback.
+<span class="nv">ret</span> <span class="o">=</span> adm1177_write<span class="o">(</span>adm1177, ADM1177_CMD_V_CONT <span class="p">|</span> ADM1177_CMD_I_CONT, <span class="m">0</span><span class="o">)</span><span class="p">;</span>
+<span class="k">if</span><span class="o">(</span>ret<span class="o">)</span>
+        goto error<span class="p">;</span>
+
+<span class="nv">ret</span> <span class="o">=</span> adm1177_read_conv<span class="o">(</span>adm1177, <span class="p">&amp;</span>conv_voltage, <span class="p">&amp;</span>conv_current<span class="o">)</span><span class="p">;</span>
+<span class="k">if</span><span class="o">(</span>ret<span class="o">)</span>
+        goto error<span class="p">;</span>
+
+<span class="nv">ret</span> <span class="o">=</span> adm1177_to_microvolts<span class="o">(</span>adm1177, conv_voltage, <span class="p">&amp;</span>voltage<span class="o">)</span><span class="p">;</span>
+<span class="k">if</span><span class="o">(</span>ret<span class="o">)</span>
+        goto error<span class="p">;</span>
+
+<span class="nv">ret</span> <span class="o">=</span> adm1177_to_microampers<span class="o">(</span>conv_current, <span class="p">&amp;</span>current<span class="o">)</span><span class="p">;</span>
+<span class="k">if</span><span class="o">(</span>ret<span class="o">)</span>
+        goto error<span class="p">;</span>
+</pre></div>
+</div>
+</section>
+<section id="adm1177-no-os-iio-support">
+<h2>ADM1177 no_OS IIO Support<a class="headerlink" href="#adm1177-no-os-iio-support" title="Permalink to this headline">¶</a></h2>
+<p>The ADM1177 IIO driver comes on top of ADM1177 driver and offers support for interfacing IIO clients through IIO lib.</p>
+</section>
+<section id="id1">
+<h2>ADM1177 Device Configuration<a class="headerlink" href="#id1" title="Permalink to this headline">¶</a></h2>
+</section>
+<section id="device-attributes">
+<h2>Device Attributes<a class="headerlink" href="#device-attributes" title="Permalink to this headline">¶</a></h2>
+<p>ADM1177 IIO device does not have any device specific attributes.</p>
+</section>
+<section id="device-channels">
+<h2>Device Channels<a class="headerlink" href="#device-channels" title="Permalink to this headline">¶</a></h2>
+<p>ADM1177 IIO device has 0 output channels and 2 input channels: 1 voltage channel and 1 current channel.</p>
+</section>
+<section id="voltage-channel">
+<h2>Voltage Channel<a class="headerlink" href="#voltage-channel" title="Permalink to this headline">¶</a></h2>
+<p>The voltage channel is:</p>
+<ul class="simple">
+<li><p>Channel 0: Voltage</p></li>
+</ul>
+<p>The voltage channel has 2 attributes:</p>
+<ul class="simple">
+<li><p>raw - the raw voltage value read from the device.</p></li>
+<li><p>scale - is the scale that has to be applied to the raw value in order to obtain the converted real value in Volts. It depends on the ADC V Range and has a specific formula.</p></li>
+</ul>
+<p>In order to obtain the value in the V units, raw has to be scaled by scale:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>converted_voltage <span class="o">[</span>V<span class="o">]</span> <span class="o">=</span> raw * scale
+converted_voltage <span class="o">[</span>V<span class="o">]</span> <span class="o">=</span> raw * <span class="o">(</span>vrange/4096<span class="o">)</span>
+</pre></div>
+</div>
+</section>
+<section id="current-channel">
+<h2>Current Channel<a class="headerlink" href="#current-channel" title="Permalink to this headline">¶</a></h2>
+<p>The voltage channel is:</p>
+<ul class="simple">
+<li><p>Channel 1: Current</p></li>
+</ul>
+<p>The voltage channel has 2 attributes:</p>
+<ul class="simple">
+<li><p>raw - the raw currrent value read from the device.</p></li>
+<li><p>scale - is the scale that has to be applied to the raw value in order to obtain the converted real value in mA. It depends on the ADC I_FULLSCALE and has a specific formula.</p></li>
+</ul>
+<p>In order to obtain the value in the mA units, raw has to be scaled by scale:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>converted_current <span class="o">[</span>V<span class="o">]</span> <span class="o">=</span> raw * scale
+converted_current <span class="o">[</span>V<span class="o">]</span> <span class="o">=</span> raw * <span class="o">(</span>I_FULLSCALE*R_SENSE/4096<span class="o">)</span>
+</pre></div>
+</div>
+</section>
+<section id="device-buffers">
+<h2>Device buffers<a class="headerlink" href="#device-buffers" title="Permalink to this headline">¶</a></h2>
+<p>The ADM1177 IIO devices driver supports the usage of a data buffer for reading purposes.</p>
+</section>
+<section id="adm1177-iio-driver-initialization-example">
+<h2>ADM1177 IIO Driver Initialization Example<a class="headerlink" href="#adm1177-iio-driver-initialization-example" title="Permalink to this headline">¶</a></h2>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="c1">#define DATA_BUFFER_SIZE 400</span>
+uint16_t iio_data_buffer<span class="o">[</span>DATA_BUFFER_SIZE*2*sizeof<span class="o">(</span>int<span class="o">)]</span><span class="p">;</span>
+
+struct adm1177_iio_dev *adm1177_iio_dev <span class="o">=</span> NULL<span class="p">;</span>
+struct adm1177_iio_init_param adm1177_iio_init_param<span class="p">;</span>
+
+struct iio_app_desc *app<span class="p">;</span>
+struct iio_data_buffer <span class="nv">adm1177_buff</span> <span class="o">=</span> <span class="o">{</span>
+        .buff <span class="o">=</span> <span class="o">(</span>void *<span class="o">)</span>iio_data_buffer,
+        .size <span class="o">=</span> DATA_BUFFER_SIZE*2*sizeof<span class="o">(</span>int<span class="o">)</span>,
+<span class="o">}</span><span class="p">;</span>
+struct iio_app_init_param <span class="nv">app_init_param</span> <span class="o">=</span> <span class="o">{</span> <span class="m">0</span> <span class="o">}</span><span class="p">;</span>
+
+struct adm1177_init_param <span class="nv">adm1177_ip</span> <span class="o">=</span> <span class="o">{</span>
+        .i2c_init <span class="o">=</span> <span class="o">{</span>
+                .device_id <span class="o">=</span> I2C_DEVICE_ID,
+                .slave_address <span class="o">=</span> ADM1177_ADDRESS,
+                .extra <span class="o">=</span> I2C_EXTRA,
+                .platform_ops <span class="o">=</span> I2C_OPS,
+                .max_speed_hz <span class="o">=</span> <span class="m">100000</span>,
+        <span class="o">}</span>,
+<span class="o">}</span><span class="p">;</span>
+
+adm1177_iio_init_param.adm1177_initial <span class="o">=</span> <span class="p">&amp;</span>adm1177_ip<span class="p">;</span>
+<span class="nv">ret</span> <span class="o">=</span> adm1177_iio_init<span class="o">(</span><span class="p">&amp;</span>adm1177_iio_dev, <span class="p">&amp;</span>adm1177_iio_init_param<span class="o">)</span><span class="p">;</span>
+<span class="k">if</span><span class="o">(</span>ret<span class="o">)</span>
+        goto error<span class="p">;</span>
+
+struct iio_app_device iio_devices<span class="o">[]</span> <span class="o">=</span> <span class="o">{</span>
+        <span class="o">{</span>
+                .name <span class="o">=</span> <span class="s2">&quot;adm1177&quot;</span>,
+                .dev <span class="o">=</span> adm1177_iio_dev,
+                .dev_descriptor <span class="o">=</span> adm1177_iio_dev-&gt;iio_dev,
+                .read_buff <span class="o">=</span> <span class="p">&amp;</span>adm1177_buff,
+        <span class="o">}</span>,
+<span class="o">}</span><span class="p">;</span>
+
+app_init_param.devices <span class="o">=</span> iio_devices<span class="p">;</span>
+app_init_param.nb_devices <span class="o">=</span> NO_OS_ARRAY_SIZE<span class="o">(</span>iio_devices<span class="o">)</span><span class="p">;</span>
+app_init_param.uart_init_params <span class="o">=</span> uart_ip<span class="p">;</span>
+
+<span class="nv">ret</span> <span class="o">=</span> iio_app_init<span class="o">(</span><span class="p">&amp;</span>app, app_init_param<span class="o">)</span><span class="p">;</span>
+<span class="k">if</span><span class="o">(</span>ret<span class="o">)</span>
+        goto error<span class="p">;</span>
+
+<span class="k">return</span> iio_app_run<span class="o">(</span>app<span class="o">)</span><span class="p">;</span>
+</pre></div>
+</div>
+</section>
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="../index.html">
+              <img class="logo" src="../_static/adi_logo.png" alt="Logo"/>
+            </a></p>
+<h1 class="logo"><a href="../index.html">no-OS</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../drivers_guide.html">no-OS drivers guide</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="../drivers_doc.html">no-OS drivers list</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="../drivers_doc.html#accelerometers">ACCELEROMETERS</a></li>
+<li class="toctree-l2 current"><a class="reference internal" href="../drivers_doc.html#analog-to-digital-converters">ANALOG TO DIGITAL CONVERTERS</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../drivers_doc.html#digital-input-output">DIGITAL INPUT/OUTPUT</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../drivers_doc.html#inertial-measurement-units">INERTIAL MEASUREMENT UNITS</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../drivers_doc.html#rf-transceiver">RF TRANSCEIVER</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../projects_doc.html">no-OS projects list</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../contributing.html">Contributing to no-OS</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../index.html">Documentation overview</a><ul>
+  <li><a href="../drivers_doc.html">no-OS drivers list</a><ul>
+      <li>Previous: <a href="adxl355.html" title="previous chapter">ADXL355 no-OS driver</a></li>
+      <li>Next: <a href="max149x6.html" title="next chapter">MAX149X6 no-OS driver</a></li>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2023, Analog Devices, Inc..
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 4.3.2</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+      |
+      <a href="../_sources/drivers/adm1177.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

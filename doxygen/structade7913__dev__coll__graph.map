@@ -1,0 +1,11 @@
+<map id="ade7913_dev" name="ade7913_dev">
+<area shape="rect" id="node1" title="ADE7913 Device structure." alt="" coords="929,125,1039,152"/>
+<area shape="rect" id="node2" href="$structno__os__spi__desc.html" title="Structure holding SPI descriptor." alt="" coords="667,44,790,71"/>
+<area shape="rect" id="node3" href="$structno__os__spi__platform__ops.html" title="Structure holding SPI function pointers that point to the platform specific function." alt="" coords="5,55,184,81"/>
+<area shape="rect" id="node4" href="$structno__os__spibus__desc.html" title="SPI bus descriptor." alt="" coords="343,85,490,112"/>
+<area shape="rect" id="node5" href="$structno__os__callback__desc.html" title="Structure describing a callback to be registered." alt="" coords="649,95,808,121"/>
+<area shape="rect" id="node6" href="$structno__os__gpio__desc.html" title="Structure holding the GPIO descriptor." alt="" coords="663,152,795,179"/>
+<area shape="rect" id="node7" href="$structno__os__gpio__platform__ops.html" title="Structure holding gpio function pointers that point to the platform specific function." alt="" coords="323,152,511,179"/>
+<area shape="rect" id="node8" href="$structno__os__irq__ctrl__desc.html" title=" " alt="" coords="654,203,803,229"/>
+<area shape="rect" id="node9" href="$structno__os__irq__platform__ops.html" title="Structure holding IRQ function pointers that point to the platform specific function." alt="" coords="328,203,505,229"/>
+</map>

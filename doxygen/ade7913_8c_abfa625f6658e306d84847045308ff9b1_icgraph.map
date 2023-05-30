@@ -1,0 +1,37 @@
+<map id="ade7913_control_interrupt" name="ade7913_control_interrupt">
+<area shape="rect" id="node1" title="Enable/disable interrupt." alt="" coords="272,1063,465,1090"/>
+<area shape="rect" id="node2" href="$ade7913_8h.html#aea6d4c3d7c7a5c651341075956f54062" title="Disable ADC_SYNC_DONE interrupt." alt="" coords="33,5,196,47"/>
+<area shape="rect" id="node3" href="$ade7913_8h.html#a2624f53d4043c75dbeca93804e3a3477" title="Disable COM_UP interrupt." alt="" coords="31,71,198,112"/>
+<area shape="rect" id="node4" href="$ade7913_8h.html#a9d41fae71fde051e56f249950ab3c9bb" title="Disable COMFLT_ERR interrupt." alt="" coords="25,136,205,177"/>
+<area shape="rect" id="node5" href="$ade7913_8h.html#a7e6e475184d70286405a98f72ab58806" title="Disable CRC_CHG interrupt." alt="" coords="35,201,194,243"/>
+<area shape="rect" id="node6" href="$ade7913_8h.html#a9289f0705c805f91fa141e82fbc1ea33" title="Disable I_WAV_OVRNG interrupt." alt="" coords="26,267,203,308"/>
+<area shape="rect" id="node7" href="$ade7913_8h.html#afa39bbe67605e3d9d732d2805320a732" title="Disable ISO_CLK_STBL_ERR interrupt." alt="" coords="35,332,194,373"/>
+<area shape="rect" id="node8" href="$ade7913_8h.html#a02bbd55c8d375c4a03681e7ad0cff5fd" title="Disable ISO_DIG_MOD_I_OVF interrupt." alt="" coords="35,397,194,439"/>
+<area shape="rect" id="node9" href="$ade7913_8h.html#af2ea822a631e129542842325207ba4e3" title="Disable ISO_DIG_MOD_V1_OVF interrupt." alt="" coords="35,463,195,504"/>
+<area shape="rect" id="node10" href="$ade7913_8h.html#a2cc680dcf2a2b3b4381d4393766783f6" title="Disable ISO_DIG_MOD_V2_OVF interrupt." alt="" coords="35,528,195,569"/>
+<area shape="rect" id="node11" href="$ade7913_8h.html#afd01d68702fcfa5017280b119401d20b" title="Disable ISO_EFUSE_MEM_ERR interrupt." alt="" coords="35,593,194,635"/>
+<area shape="rect" id="node12" href="$ade7913_8h.html#a773726610f00bea371ee632d733f56db" title="Disable ISO_PHY_CRC_ERR interrupt." alt="" coords="35,659,194,700"/>
+<area shape="rect" id="node13" href="$ade7913_8h.html#a80658d602196ae0e5f38e9389ab78a40" title="Disable ISO_TEST_MMR_ERR interrupt." alt="" coords="35,724,194,765"/>
+<area shape="rect" id="node14" href="$ade7913_8h.html#a702871c38a5d5ae127bf13faf55dee1f" title="Disable SPI_CRC_ERR interrupt." alt="" coords="35,789,194,831"/>
+<area shape="rect" id="node15" href="$ade7913_8h.html#a17bafc910c48e08d6b7133aaf26f340d" title="Disable STATUS1X interrupt." alt="" coords="5,855,224,882"/>
+<area shape="rect" id="node16" href="$ade7913_8h.html#a3da5eb2aa39940d1b77ec53dbd3d51bb" title="Disable STATUS2X interrupt." alt="" coords="5,906,224,933"/>
+<area shape="rect" id="node17" href="$ade7913_8h.html#ae0e300c82d85ec28c96fc6b7007ce4df" title="Disable V1_WAV_OVRNG interrupt." alt="" coords="37,957,192,999"/>
+<area shape="rect" id="node18" href="$ade7913_8h.html#a72ef9bc4328517d95b5699fcb5fb0716" title="Disable V2_WAV_OVRNG interrupt." alt="" coords="37,1023,192,1064"/>
+<area shape="rect" id="node19" href="$ade7913_8h.html#a6213feb8bd5dc8b839522d4e40a73d37" title="Enable ADC_SYNC_DONE interrupt." alt="" coords="35,1088,194,1129"/>
+<area shape="rect" id="node20" href="$ade7913_8h.html#ad444007e799cb6921f9d73f1a8a81c1b" title="Enable COM_UP interrupt." alt="" coords="33,1153,197,1195"/>
+<area shape="rect" id="node21" href="$ade7913_8h.html#ae6e5e61d60a08dbfd523fa34da186920" title="Enable COMFLT_ERR interrupt." alt="" coords="26,1219,203,1260"/>
+<area shape="rect" id="node22" href="$ade7913_8h.html#a31186cdec2eb95ba904fb59fe1892490" title="Enable CRC_CHG interrupt." alt="" coords="37,1284,192,1325"/>
+<area shape="rect" id="node23" href="$ade7913_8h.html#ae4c373c50ce2ed77a7fd146c52a1ae77" title="Enable I_WAV_OVRNG interrupt." alt="" coords="27,1349,202,1391"/>
+<area shape="rect" id="node24" href="$ade7913_8h.html#aeed54af4c8beab09ccff859933df1b8a" title="Enable ISO_CLK_STBL_ERR interrupt." alt="" coords="37,1415,192,1456"/>
+<area shape="rect" id="node25" href="$ade7913_8h.html#a09b3d53ab62a53688a8807fdd28e6963" title="Enable ISO_DIG_MOD_I_OVF interrupt." alt="" coords="37,1480,192,1521"/>
+<area shape="rect" id="node26" href="$ade7913_8h.html#af6b4198813fb0ea9c122d156eb50fefc" title="Enable ISO_DIG_MOD_V1_OVF interrupt." alt="" coords="35,1545,195,1587"/>
+<area shape="rect" id="node27" href="$ade7913_8h.html#a2f187acc016c606cb5bfdce8a50246e6" title="Enable ISO_DIG_MOD_V2_OVF interrupt." alt="" coords="35,1611,195,1652"/>
+<area shape="rect" id="node28" href="$ade7913_8h.html#a1b18eac18659377da8a4ac170737cde1" title="Enable ISO_EFUSE_MEM_ERR interrupt." alt="" coords="37,1676,192,1717"/>
+<area shape="rect" id="node29" href="$ade7913_8h.html#afc82bc72264b105dec1625ac3b807c80" title="Enable ISO_PHY_CRC_ERR interrupt." alt="" coords="37,1741,192,1783"/>
+<area shape="rect" id="node30" href="$ade7913_8h.html#a66ca0fb72b17c8a1ee7b333049fcea4b" title="Enable ISO_TEST_MMR_ERR interrupt." alt="" coords="37,1807,192,1848"/>
+<area shape="rect" id="node31" href="$ade7913_8h.html#a12d00e67d2c094da03b64261be82e469" title="Enable SPI_CRC_ERR interrupt." alt="" coords="37,1872,192,1913"/>
+<area shape="rect" id="node32" href="$ade7913_8h.html#a91da1df09f8dcd06706d1f749e83b105" title="Enable STATUS1X interrupt." alt="" coords="7,1938,223,1965"/>
+<area shape="rect" id="node33" href="$ade7913_8h.html#af544cff91ba9d8034bee2f0f228e9369" title="Enable STATUS2X interrupt." alt="" coords="7,1989,223,2015"/>
+<area shape="rect" id="node34" href="$ade7913_8h.html#a338f323817f1c5a0f54cd13dd1e8983d" title="Enable V1_WAV_OVRNG interrupt." alt="" coords="21,2040,208,2081"/>
+<area shape="rect" id="node35" href="$ade7913_8h.html#ac739f0c6410ad489d5b59f6bdc168687" title="Enable V2_WAV_OVRNG interrupt." alt="" coords="21,2105,208,2147"/>
+</map>

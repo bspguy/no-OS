@@ -1,0 +1,7 @@
+<map id="no_os_uart_init" name="no_os_uart_init">
+<area shape="rect" id="node1" title="Initialize the UART communication peripheral." alt="" coords="424,56,545,83"/>
+<area shape="rect" id="node2" href="$apard32690_2src_2examples_2basic__example_2basic__example_8c.html#a72943dc9011d36293cb05ca5d7cb6899" title="Basic example main execution." alt="" coords="215,5,375,32"/>
+<area shape="rect" id="node3" href="$demo__esp_2src_2examples_2basic_2basic__example_8c.html#adf61ab6fc732b20dc9f8a4be75985c1a" title=" " alt="" coords="213,56,376,83"/>
+<area shape="rect" id="node5" href="$ad-acevsecrdset-sl_2src_2main_8c.html#ae66f6b31b5ad750f1fe042a706a4e3d4" title="Main function execution for Maxim platform." alt="" coords="267,107,322,133"/>
+<area shape="rect" id="node4" href="$demo__esp_2src_2examples_2basic_2basic__example_8c.html#a72943dc9011d36293cb05ca5d7cb6899" title="Basic example main execution." alt="" coords="5,56,165,83"/>
+</map>

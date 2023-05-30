@@ -1,0 +1,421 @@
+
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+    <title>MAX149X6 no-OS driver &#8212; no-OS  documentation</title>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/alabaster.css" />
+    <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
+    <script src="../_static/jquery.js"></script>
+    <script src="../_static/underscore.js"></script>
+    <script src="../_static/doctools.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="ADIS no-OS driver" href="adis.html" />
+    <link rel="prev" title="ADM1177 no-OS Driver" href="adm1177.html" />
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="max149x6-no-os-driver">
+<h1>MAX149X6 no-OS driver<a class="headerlink" href="#max149x6-no-os-driver" title="Permalink to this headline">¶</a></h1>
+<section id="supported-devices">
+<h2>Supported Devices<a class="headerlink" href="#supported-devices" title="Permalink to this headline">¶</a></h2>
+<p><a class="reference external" href="https://www.analog.com/MAX14906">MAX14906</a>
+<a class="reference external" href="https://www.analog.com/MAX14916">MAX14916</a></p>
+</section>
+<section id="overview">
+<h2>Overview<a class="headerlink" href="#overview" title="Permalink to this headline">¶</a></h2>
+<p>MAX14906 and MAX14916 share the same API when referring to the CRC algorithm,
+register read, write and update. Although, each of them has its own register map
+and a specific API, therefore there are two files (header and source file) for
+them called max149x6-base.h and max149x6-base.c which includes the common stuff.
+Each of these devices then has its own driver files which includes the base
+driver files and uses the common API within their specific APIs.</p>
+<p>MAX14906 is an IEC 61131-2 compliant, high-speed, four-channel industrial
+digital output/input device that can be configured on a per-channel basis
+as a high-side (HS) switch, push-pull (PP) driver, or a Type 1 and 3, or Type 2
+digital input. The MAX14906 is specified for operation with a supply voltage up
+to 40V and is tolerant to 65V.</p>
+<p>MAX14916 on the other side has eight high-side switched specified to deliver up
+to 1.1A (min) continuous current per channel. The two adjacent channels can pe
+paralleled to form four 2.4A high-side switches. The high-side switches have
+on-resistance of 250mOhms (max) at 125 degrees Celsius ambient temperature.</p>
+</section>
+<section id="applications">
+<h2>Applications<a class="headerlink" href="#applications" title="Permalink to this headline">¶</a></h2>
+</section>
+<section id="id1">
+<h2>MAX14906<a class="headerlink" href="#id1" title="Permalink to this headline">¶</a></h2>
+<ul class="simple">
+<li><p>Industrial Digital Output and Input Module</p></li>
+<li><p>Configurable Digital Input/Output</p></li>
+<li><p>Motor Control</p></li>
+<li><p>PLC systems</p></li>
+<li><p>Distributed Control Systems (DCS)</p></li>
+</ul>
+</section>
+<section id="max14906-device-configuration">
+<h2>MAX14906 Device Configuration<a class="headerlink" href="#max14906-device-configuration" title="Permalink to this headline">¶</a></h2>
+</section>
+<section id="driver-initialization">
+<h2>Driver Initialization<a class="headerlink" href="#driver-initialization" title="Permalink to this headline">¶</a></h2>
+<p>In order to be able to use the device, you will have to provide the support
+for the communication protocol (SPI).</p>
+<p>The first API to be called is <strong>max14906_init</strong>. Make sure that it returns 0,
+which means that the driver was initialized correctly.</p>
+</section>
+<section id="channel-configuration">
+<h2>Channel Configuration<a class="headerlink" href="#channel-configuration" title="Permalink to this headline">¶</a></h2>
+<p>Each channel cand be configured either as a digital input or a digital output.
+In order to do that you need to call the <strong>max14906_ch_func</strong> API.
+The state of a channel (voltage state) cand be read with the <strong>max14906_ch_get</strong>
+API.
+If a specific channel is set as an output you can also set the logic state
+of the channel with <strong>max14906_ch_set</strong> API.</p>
+</section>
+<section id="current-limit-configuration">
+<h2>Current Limit Configuration<a class="headerlink" href="#current-limit-configuration" title="Permalink to this headline">¶</a></h2>
+<p>Current limit for each channel can be set and read with <strong>max14906_climit_set</strong>,
+respectively with <strong>max14906_climit_get</strong> APIs.</p>
+</section>
+<section id="interrupts-configuration">
+<h2>Interrupts Configuration<a class="headerlink" href="#interrupts-configuration" title="Permalink to this headline">¶</a></h2>
+<p>The device allows the usage of interrupts which can be mapped to FAULT pin
+and is configured like any other no-os interrupt (using no_os_irq API).</p>
+</section>
+<section id="max14906-driver-initialization-example">
+<h2>MAX14906 Driver Initialization Example<a class="headerlink" href="#max14906-driver-initialization-example" title="Permalink to this headline">¶</a></h2>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>struct max149x6_desc *max14906<span class="p">;</span>
+struct no_os_spi_init_param <span class="nv">spi_ip</span> <span class="o">=</span> <span class="o">{</span>
+        .device_id <span class="o">=</span> <span class="m">0</span>,
+        .extra <span class="o">=</span> <span class="p">&amp;</span>max14906_spi_extra,
+        .max_speed_hz <span class="o">=</span> <span class="m">100000</span>,
+        .platform_ops <span class="o">=</span> <span class="p">&amp;</span>max_spi_ops,
+        .chip_select <span class="o">=</span> <span class="m">0</span>,
+<span class="o">}</span><span class="p">;</span>
+struct max149x6_init_param <span class="nv">max14906_ip</span> <span class="o">=</span> <span class="o">{</span>
+        .chip_address <span class="o">=</span> <span class="m">0</span><span class="p">;</span>
+        .comm_desc <span class="o">=</span> <span class="p">&amp;</span>spi_ip<span class="p">;</span>
+        .crc_en <span class="o">=</span> true<span class="p">;</span>
+<span class="o">}</span>
+
+<span class="nv">ret</span> <span class="o">=</span> max14906_init<span class="o">(</span><span class="p">&amp;</span>max14906, <span class="p">&amp;</span>max14906_ip<span class="o">)</span><span class="p">;</span>
+<span class="k">if</span> <span class="o">(</span>ret<span class="o">)</span>
+        goto error<span class="p">;</span>
+</pre></div>
+</div>
+</section>
+<section id="max14906-no-os-iio-support">
+<h2>MAX14906 no-OS IIO support<a class="headerlink" href="#max14906-no-os-iio-support" title="Permalink to this headline">¶</a></h2>
+<p>The MAX14906 IIO driver comes on top of the MAX14906 driver and offers support
+for interfacing IIO clients through IIO lib.</p>
+</section>
+<section id="max14906-iio-devce-configuration">
+<h2>MAX14906 IIO Devce Configuration<a class="headerlink" href="#max14906-iio-devce-configuration" title="Permalink to this headline">¶</a></h2>
+</section>
+<section id="device-attributes">
+<h2>Device Attributes<a class="headerlink" href="#device-attributes" title="Permalink to this headline">¶</a></h2>
+</section>
+<section id="output-attributes">
+<h2>Output Attributes<a class="headerlink" href="#output-attributes" title="Permalink to this headline">¶</a></h2>
+<p>MAX14906 has 2 output attributes(do mode, current limit).</p>
+<p>DO MODE means the configuration of the device, there is also a do mode
+avail attribute which means the do mode available(list of configuration modes)
+for the device.</p>
+<p>Current Limit means the current limit set on by the device on a specific
+output channel. There is also a current limit avail attribute which contains
+a list with the available limits for the output current.</p>
+</section>
+<section id="input-attributes">
+<h2>Input Attributes<a class="headerlink" href="#input-attributes" title="Permalink to this headline">¶</a></h2>
+<p>IEC Type attribute contains information about the IEC type used by the device.
+For this one user also has to select from the IEC type available attribute to
+assign IEC Type a value.</p>
+</section>
+<section id="device-channels">
+<h2>Device Channels<a class="headerlink" href="#device-channels" title="Permalink to this headline">¶</a></h2>
+<p>MAX14906 has a specific API, <strong>max14906_iio_setup_channels</strong> for configuring the
+channels at the initialization, therefore the channels can be configured as
+input or output as requested.</p>
+</section>
+<section id="max14906-iio-driver-initialization-example">
+<h2>MAX14906 IIO Driver Initialization Example<a class="headerlink" href="#max14906-iio-driver-initialization-example" title="Permalink to this headline">¶</a></h2>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>struct max149x6_init_param <span class="nv">max14906_ip</span> <span class="o">=</span> <span class="o">{</span>
+        .chip_address <span class="o">=</span> <span class="m">0</span><span class="p">;</span>
+        .comm_desc <span class="o">=</span> <span class="p">&amp;</span>spi_ip<span class="p">;</span>
+        .crc_en <span class="o">=</span> true<span class="p">;</span>
+<span class="o">}</span>
+struct max14906_iio_desc *max14906_iio_desc<span class="p">;</span>
+struct max14906_iio_desc_init_param <span class="nv">max14906_iio_ip</span> <span class="o">=</span> <span class="o">{</span>
+        .max14906_ip <span class="o">=</span> <span class="p">&amp;</span>max14906_ip,
+        .channel_configs <span class="o">=</span> <span class="o">{</span>
+                <span class="o">{</span>
+                        .enabled <span class="o">=</span> true,
+                        .function <span class="o">=</span> MAX14906_OUT,
+                <span class="o">}</span>,
+                <span class="o">{</span>
+                        .enabled <span class="o">=</span> true,
+                        .function <span class="o">=</span> MAX14906_IN,
+                <span class="o">}</span>,
+                <span class="o">{</span>
+                        .enabled <span class="o">=</span> true,
+                        .function <span class="o">=</span> MAX14906_OUT,
+                <span class="o">}</span>,
+                <span class="o">{</span>
+                        .enabled <span class="o">=</span> true,
+                        .funtion <span class="o">=</span> MAX14906_IN,
+                <span class="o">}</span>,
+        <span class="o">}</span>,
+<span class="o">}</span><span class="p">;</span>
+
+struct iio_app_desc *app<span class="p">;</span>
+struct iio_app_init_param <span class="nv">app_init_param</span> <span class="o">=</span> <span class="o">{</span> <span class="m">0</span> <span class="o">}</span><span class="p">;</span>
+
+<span class="nv">ret</span> <span class="o">=</span> max14906_iio_init<span class="o">(</span><span class="p">&amp;</span>max14906_iio_desc, <span class="p">&amp;</span>max14906_iio_ip<span class="o">)</span><span class="p">;</span>
+<span class="k">if</span> <span class="o">(</span>ret<span class="o">)</span>
+        goto error<span class="p">;</span>
+
+struct iio_app_device iio_devices<span class="o">[]</span> <span class="o">=</span> <span class="o">{</span>
+        <span class="o">{</span>
+                .name <span class="o">=</span> <span class="s2">&quot;max14906&quot;</span>,
+                .dev <span class="o">=</span> max14906_iio_desc,
+                .dev_descriptor <span class="o">=</span> max14906_iio_desc-&gt;iio_dev,
+        <span class="o">}</span>
+<span class="o">}</span><span class="p">;</span>
+
+app_init_param.devices <span class="o">=</span> iio_devices<span class="p">;</span>
+app_init_param.nb_devices <span class="o">=</span> NO_OS_ARRAY_SIZE<span class="o">(</span>iio_devices<span class="o">)</span><span class="p">;</span>
+app_init_param.uart_init_params <span class="o">=</span> max14906_uart_ip<span class="p">;</span>
+
+<span class="nv">ret</span> <span class="o">=</span> iio_app_init<span class="o">(</span><span class="p">&amp;</span>app, app_init_param<span class="o">)</span><span class="p">;</span>
+<span class="k">if</span> <span class="o">(</span>ret<span class="o">)</span>
+        goto error<span class="p">;</span>
+
+<span class="k">return</span> iio_app_run<span class="o">(</span>app<span class="o">)</span><span class="p">;</span>
+</pre></div>
+</div>
+</section>
+<section id="id2">
+<h2>MAX14916<a class="headerlink" href="#id2" title="Permalink to this headline">¶</a></h2>
+<ul class="simple">
+<li><p>Industrial Digital Outputs</p></li>
+<li><p>PLC systems</p></li>
+</ul>
+</section>
+<section id="max14916-device-configuration">
+<h2>MAX14916 Device Configuration<a class="headerlink" href="#max14916-device-configuration" title="Permalink to this headline">¶</a></h2>
+</section>
+<section id="id3">
+<h2>Driver Initialization<a class="headerlink" href="#id3" title="Permalink to this headline">¶</a></h2>
+<p>In order to be able to use the device, you will have to provide the support
+for the communication protocol (SPI).</p>
+<p>The first API to be called is <strong>max14916_init</strong>. Make sure that it returns 0,
+which means that the driver was initialized correctly.</p>
+</section>
+<section id="id4">
+<h2>Channel Configuration<a class="headerlink" href="#id4" title="Permalink to this headline">¶</a></h2>
+<p>Each channel can be configured as a digital output only.
+The state of a channel(voltage state) cand be read with the <strong>max14916_ch_get</strong>
+API and also set with <strong>max14916_ch_set</strong>.</p>
+</section>
+<section id="led-configuration">
+<h2>LED Configuration<a class="headerlink" href="#led-configuration" title="Permalink to this headline">¶</a></h2>
+<p>Status LEDs cand be configured with <strong>max14916_sled_set</strong> which takes as
+parameters the device descriptor, the number of the channel requested for
+the LED state to change and the requested state.</p>
+<p>Fault LEDs state however can not be set by the user since they indicate
+the case of a fault, still they have a configurable minimum on-time value
+assigned to them which the user can change through the
+<strong>max14916_fled_time_set</strong> API.</p>
+</section>
+<section id="id5">
+<h2>Interrupts Configuration<a class="headerlink" href="#id5" title="Permalink to this headline">¶</a></h2>
+<p>The device allows the usage of interrupts which can be mapped to FAULT pin
+and is configured like any other no-os interrupt(using no_os_irq API) since
+the descriptor is common for both MAX14916 and MAX14906.</p>
+</section>
+<section id="max14916-driver-initialization-example">
+<h2>MAX14916 Driver Initialization Example<a class="headerlink" href="#max14916-driver-initialization-example" title="Permalink to this headline">¶</a></h2>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>struct max149x6_desc *max14916<span class="p">;</span>
+struct no_os_spi_init_param <span class="nv">spi_ip</span> <span class="o">=</span> <span class="o">{</span>
+        .device_id <span class="o">=</span> <span class="m">1</span>,
+        .extra <span class="o">=</span> <span class="p">&amp;</span>max14916_spi_extra,
+        .max_speed_hz <span class="o">=</span> <span class="m">100000</span>,
+        .platform_ops <span class="o">=</span> <span class="p">&amp;</span>max_spi_ops,
+        .chip_select <span class="o">=</span> <span class="m">1</span>,
+<span class="o">}</span><span class="p">;</span>
+struct max149x6_init_param <span class="nv">max14916_ip</span> <span class="o">=</span> <span class="o">{</span>
+        .chip_address <span class="o">=</span> <span class="m">0</span><span class="p">;</span>
+        .comm_desc <span class="o">=</span> <span class="p">&amp;</span>spi_ip<span class="p">;</span>
+        .crc_en <span class="o">=</span> true<span class="p">;</span>
+<span class="o">}</span>
+
+<span class="nv">ret</span> <span class="o">=</span> max14916_init<span class="o">(</span><span class="p">&amp;</span>max14916, <span class="p">&amp;</span>max14916_ip<span class="o">)</span><span class="p">;</span>
+<span class="k">if</span> <span class="o">(</span>ret<span class="o">)</span>
+        goto error<span class="p">;</span>
+</pre></div>
+</div>
+</section>
+<section id="max14916-no-os-iio-support">
+<h2>MAX14916 no-OS IIO support<a class="headerlink" href="#max14916-no-os-iio-support" title="Permalink to this headline">¶</a></h2>
+<p>The MAX14916 IIO driver comes on top of the MAX14916 driver and offers support
+for interfacing IIO clients through IIO lib.</p>
+</section>
+<section id="max14916-iio-devce-configuration">
+<h2>MAX14916 IIO Devce Configuration<a class="headerlink" href="#max14916-iio-devce-configuration" title="Permalink to this headline">¶</a></h2>
+</section>
+<section id="id6">
+<h2>Device Attributes<a class="headerlink" href="#id6" title="Permalink to this headline">¶</a></h2>
+<p>MAX14916 has only 3 attributes :</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">raw</span> <span class="pre">-</span> <span class="pre">indicates</span> <span class="pre">the</span> <span class="pre">state</span> <span class="pre">of</span> <span class="pre">a</span> <span class="pre">channel(0</span> <span class="pre">or</span> <span class="pre">1).</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">scale</span> <span class="pre">-</span> <span class="pre">which</span> <span class="pre">is</span> <span class="pre">always</span> <span class="pre">1</span> <span class="pre">because</span> <span class="pre">the</span> <span class="pre">device</span> <span class="pre">doesn't</span> <span class="pre">have</span> <span class="pre">any</span> <span class="pre">other</span> <span class="pre">scale.</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">offset</span> <span class="pre">-</span> <span class="pre">which</span> <span class="pre">is</span> <span class="pre">0.</span></code></p></li>
+</ul>
+</section>
+<section id="max14916-iio-driver-initialization-example">
+<h2>MAX14916 IIO Driver Initialization Example<a class="headerlink" href="#max14916-iio-driver-initialization-example" title="Permalink to this headline">¶</a></h2>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>struct max149x6_init_param <span class="nv">max14916_ip</span> <span class="o">=</span> <span class="o">{</span>
+        .chip_address <span class="o">=</span> <span class="m">0</span><span class="p">;</span>
+        .comm_desc <span class="o">=</span> <span class="p">&amp;</span>spi_ip<span class="p">;</span>
+        .crc_en <span class="o">=</span> true<span class="p">;</span>
+<span class="o">}</span>
+struct max14916_iio_desc *max14916_iio_desc<span class="p">;</span>
+struct max14916_iio_desc_init_param <span class="nv">max14916_iio_ip</span> <span class="o">=</span> <span class="o">{</span>
+        .max14916_ip <span class="o">=</span> <span class="p">&amp;</span>max14916_ip,
+        .ch_enable <span class="o">=</span> <span class="o">{</span>
+                        true, true, true, <span class="nb">true</span>
+                <span class="o">}</span>
+        <span class="o">}</span>,
+<span class="o">}</span><span class="p">;</span>
+
+struct iio_app_desc *app<span class="p">;</span>
+struct iio_app_init_param <span class="nv">app_init_param</span> <span class="o">=</span> <span class="o">{</span> <span class="m">0</span> <span class="o">}</span><span class="p">;</span>
+
+<span class="nv">ret</span> <span class="o">=</span> max14916_iio_init<span class="o">(</span><span class="p">&amp;</span>max14916_iio_desc, <span class="p">&amp;</span>max14916_iio_ip<span class="o">)</span><span class="p">;</span>
+<span class="k">if</span> <span class="o">(</span>ret<span class="o">)</span>
+        goto error<span class="p">;</span>
+
+struct iio_app_device iio_devices<span class="o">[]</span> <span class="o">=</span> <span class="o">{</span>
+        <span class="o">{</span>
+                .name <span class="o">=</span> <span class="s2">&quot;max14916&quot;</span>,
+                .dev <span class="o">=</span> max14916_iio_desc,
+                .dev_descriptor <span class="o">=</span> max14916_iio_desc-&gt;iio_dev,
+        <span class="o">}</span>
+<span class="o">}</span><span class="p">;</span>
+
+app_init_param.devices <span class="o">=</span> iio_devices<span class="p">;</span>
+app_init_param.nb_devices <span class="o">=</span> NO_OS_ARRAY_SIZE<span class="o">(</span>iio_devices<span class="o">)</span><span class="p">;</span>
+app_init_param.uart_init_params <span class="o">=</span> max14916_uart_ip<span class="p">;</span>
+
+<span class="nv">ret</span> <span class="o">=</span> iio_app_init<span class="o">(</span><span class="p">&amp;</span>app, app_init_param<span class="o">)</span><span class="p">;</span>
+<span class="k">if</span> <span class="o">(</span>ret<span class="o">)</span>
+        goto error<span class="p">;</span>
+
+<span class="k">return</span> iio_app_run<span class="o">(</span>app<span class="o">)</span><span class="p">;</span>
+</pre></div>
+</div>
+</section>
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="../index.html">
+              <img class="logo" src="../_static/adi_logo.png" alt="Logo"/>
+            </a></p>
+<h1 class="logo"><a href="../index.html">no-OS</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../drivers_guide.html">no-OS drivers guide</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="../drivers_doc.html">no-OS drivers list</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="../drivers_doc.html#accelerometers">ACCELEROMETERS</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../drivers_doc.html#analog-to-digital-converters">ANALOG TO DIGITAL CONVERTERS</a></li>
+<li class="toctree-l2 current"><a class="reference internal" href="../drivers_doc.html#digital-input-output">DIGITAL INPUT/OUTPUT</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../drivers_doc.html#inertial-measurement-units">INERTIAL MEASUREMENT UNITS</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../drivers_doc.html#rf-transceiver">RF TRANSCEIVER</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../projects_doc.html">no-OS projects list</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../contributing.html">Contributing to no-OS</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../index.html">Documentation overview</a><ul>
+  <li><a href="../drivers_doc.html">no-OS drivers list</a><ul>
+      <li>Previous: <a href="adm1177.html" title="previous chapter">ADM1177 no-OS Driver</a></li>
+      <li>Next: <a href="adis.html" title="next chapter">ADIS no-OS driver</a></li>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2023, Analog Devices, Inc..
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 4.3.2</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+      |
+      <a href="../_sources/drivers/max149x6.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>
