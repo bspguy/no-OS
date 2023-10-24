@@ -41,6 +41,7 @@
 #define AD7616_H_
 
 #include "no_os_gpio.h"
+#include <stdint.h>
 
 /******************************************************************************/
 /********************** Macros and Constants Definitions **********************/
@@ -112,6 +113,11 @@ enum ad7616_ch {
 	AD7616_VA5,
 	AD7616_VA6,
 	AD7616_VA7,
+	AD7616_VA_VCC,
+	AD7616_VA_ALDO,
+	AD7616_VA_RESERVED1,
+	AD7616_VA_SELF_TEST,
+	AD7616_VA_RESERVED2,
 	AD7616_VB0,
 	AD7616_VB1,
 	AD7616_VB2,
@@ -120,6 +126,11 @@ enum ad7616_ch {
 	AD7616_VB5,
 	AD7616_VB6,
 	AD7616_VB7,
+	AD7616_VB_VCC,
+	AD7616_VB_ALDO,
+	AD7616_VB_RESERVED1,
+	AD7616_VB_SELF_TEST,
+	AD7616_VB_RESERVED2,
 };
 
 enum ad7616_range {
@@ -144,6 +155,7 @@ struct ad7616_dev {
 	struct no_os_spi_desc		*spi_desc;
 	struct spi_engine_offload_init_param *offload_init_param;
 	uint32_t reg_access_speed;
+	uint8_t crc;
 	/* GPIO */
 	struct no_os_gpio_desc	*gpio_hw_rngsel0;
 	struct no_os_gpio_desc	*gpio_hw_rngsel1;
@@ -151,6 +163,8 @@ struct ad7616_dev {
 	struct no_os_gpio_desc	*gpio_os0;
 	struct no_os_gpio_desc	*gpio_os1;
 	struct no_os_gpio_desc	*gpio_os2;
+	struct no_os_gpio_desc	*gpio_convst;
+	struct no_os_gpio_desc	*gpio_busy;
 	/* AXI Core */
 	uint32_t core_baseaddr;
 	/* Device Settings */
@@ -160,6 +174,8 @@ struct ad7616_dev {
 	enum ad7616_range		vb[8];
 	enum ad7616_osr			osr;
 	void (*dcache_invalidate_range)(uint32_t address, uint32_t bytes_count);
+	/* Sequencer and burst mode */
+	uint8_t layers_nb;
 };
 
 struct ad7616_init_param {
@@ -167,6 +183,7 @@ struct ad7616_init_param {
 	struct no_os_spi_init_param		*spi_param;
 	struct spi_engine_offload_init_param *offload_init_param;
 	uint32_t reg_access_speed;
+	uint8_t crc;
 	/* GPIO */
 	struct no_os_gpio_init_param		*gpio_hw_rngsel0_param;
 	struct no_os_gpio_init_param		*gpio_hw_rngsel1_param;
@@ -174,6 +191,8 @@ struct ad7616_init_param {
 	struct no_os_gpio_init_param		*gpio_os0_param;
 	struct no_os_gpio_init_param		*gpio_os1_param;
 	struct no_os_gpio_init_param		*gpio_os2_param;
+	struct no_os_gpio_init_param		*gpio_convst_param;
+	struct no_os_gpio_init_param		*gpio_busy_param;
 	/* Core */
 	uint32_t			core_baseaddr;
 	/* Device Settings */
@@ -182,6 +201,16 @@ struct ad7616_init_param {
 	enum ad7616_range		vb[8];
 	enum ad7616_osr			osr;
 	void (*dcache_invalidate_range)(uint32_t address, uint32_t bytes_count);
+};
+
+struct ad7616_conversion_result {
+	uint16_t channel_a;
+	uint16_t channel_b;
+};
+
+struct ad7616_sequencer_layer {
+	enum ad7616_ch ch_a;
+	enum ad7616_ch ch_b;
 };
 
 /******************************************************************************/
@@ -235,7 +264,7 @@ int32_t ad7616_set_oversampling_ratio(struct ad7616_dev *dev,
 				      enum ad7616_osr osr);
 /* Read data in serial mode. */
 int32_t ad7616_read_data_serial(struct ad7616_dev *dev,
-				uint32_t *buf,
+				struct ad7616_conversion_result *results,
 				uint32_t samples);
 /* Read data in parallel mode. */
 int32_t ad7616_read_data_parallel(struct ad7616_dev *dev,
@@ -246,4 +275,14 @@ int32_t ad7616_core_setup(struct ad7616_dev *dev);
 /* Initialize the device. */
 int32_t ad7616_setup(struct ad7616_dev **device,
 		     struct ad7616_init_param *init_param);
+
+int32_t ad7616_read_channel_source(struct ad7616_dev *dev, enum ad7616_ch *ch_a,
+				   enum ad7616_ch *ch_b);
+
+int32_t ad7616_select_channel_source(struct ad7616_dev *dev, enum ad7616_ch ch);
+
+int32_t ad7616_setup_sequencer(struct ad7616_dev *dev,
+			       struct ad7616_sequencer_layer *layers, uint32_t layers_nb, uint8_t burst);
+
+int32_t ad7616_disable_sequencer(struct ad7616_dev *dev);
 #endif

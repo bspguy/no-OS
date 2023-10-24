@@ -3,6 +3,7 @@
  *   @brief  Implementation of AD7616 Driver.
  *   @author DBogdan (dragos.bogdan@analog.com)
  *   @author Antoniu Miclaus (antoniu.miclaus@analog.com)
+ *   @author Esteban Blanc (eblanc@baylibre.com)
 ********************************************************************************
  * Copyright 2020(c) Analog Devices, Inc.
  *
@@ -38,20 +39,292 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 *******************************************************************************/
 
+/* Datasheet: https://www.analog.com/media/en/technical-documentation/data-sheets/AD7616.pdf */
+
 /******************************************************************************/
 /***************************** Include Files **********************************/
 /******************************************************************************/
 #include <stdint.h>
-#include <stdio.h>
 #include <stdlib.h>
-#include "spi_engine.h"
-#include "axi_dmac.h"
-#include "no_os_gpio.h"
+#include <string.h>
+#include <assert.h>
+#include <stdio.h>
+
 #include "ad7616.h"
+#include "no_os_gpio.h"
 #include "no_os_error.h"
 #include "no_os_delay.h"
-#include "no_os_axi_io.h"
 #include "no_os_alloc.h"
+
+#ifdef PLATFORM_ZYNQMP
+#include "spi_engine.h"
+#include "axi_dmac.h"
+#include "no_os_axi_io.h"
+#else
+#include "no_os_spi.h"
+#endif
+
+#define GET_BIT(v, b) ((v >> b) & 1)
+#define TOGGLE_DELAY 8192
+
+/**
+ * @brief Compute the CRC for one channel. See CRC chapter in the datasheet
+ * @param data - Data to check
+ * @param crc - Initial crc
+ * @return The computed CRC
+ */
+static uint8_t crc_channel(uint16_t data, uint8_t crc)
+{
+	uint8_t crc_out;
+
+	uint8_t data_0 = GET_BIT(data, 0);
+	uint8_t data_1 = GET_BIT(data, 1);
+	uint8_t data_2 = GET_BIT(data, 2);
+	uint8_t data_3 = GET_BIT(data, 3);
+	uint8_t data_4 = GET_BIT(data, 4);
+	uint8_t data_5 = GET_BIT(data, 5);
+	uint8_t data_6 = GET_BIT(data, 6);
+	uint8_t data_7 = GET_BIT(data, 7);
+	uint8_t data_8 = GET_BIT(data, 8);
+	uint8_t data_9 = GET_BIT(data, 9);
+	uint8_t data_10 = GET_BIT(data, 10);
+	uint8_t data_11 = GET_BIT(data, 11);
+	uint8_t data_12 = GET_BIT(data, 12);
+	uint8_t data_13 = GET_BIT(data, 13);
+	uint8_t data_14 = GET_BIT(data, 14);
+	uint8_t data_15 = GET_BIT(data, 15);
+
+	uint8_t crc_0 = GET_BIT(crc, 0);
+	uint8_t crc_1 = GET_BIT(crc, 1);
+	uint8_t crc_2 = GET_BIT(crc, 2);
+	uint8_t crc_3 = GET_BIT(crc, 3);
+	uint8_t crc_4 = GET_BIT(crc, 4);
+	uint8_t crc_5 = GET_BIT(crc, 5);
+	uint8_t crc_6 = GET_BIT(crc, 6);
+	uint8_t crc_7 = GET_BIT(crc, 7);
+
+	crc_out = data_15 ^ data_13 ^ data_11 ^ data_7 ^ data_6 ^ data_5 ^
+		  crc_3 ^ crc_5 ^ crc_7;
+
+	crc_out = (crc_out << 1) | (data_14 ^ data_12 ^ data_10 ^ data_6 ^
+				    data_5 ^ data_4 ^ crc_2 ^ crc_4 ^ crc_6);
+
+	crc_out = (crc_out << 1) |
+		  (data_15 ^ data_13 ^ data_11 ^ data_9 ^ data_5 ^ data_4 ^
+		   data_3 ^ crc_1 ^ crc_3 ^ crc_5 ^ crc_7);
+
+	crc_out = (crc_out << 1) |
+		  (data_15 ^ data_14 ^ data_12 ^ data_10 ^ data_8 ^ data_4 ^
+		   data_3 ^ data_2 ^ crc_0 ^ crc_2 ^ crc_4 ^ crc_6 ^ crc_7);
+
+	crc_out = (crc_out << 1) |
+		  (data_14 ^ data_13 ^ data_11 ^ data_9 ^ data_7 ^ data_3 ^
+		   data_2 ^ data_1 ^ crc_1 ^ crc_3 ^ crc_5 ^ crc_6);
+
+	crc_out = (crc_out << 1) | (data_15 ^ data_13 ^ data_12 ^ data_10 ^
+				    data_8 ^ data_6 ^ data_2 ^ data_1 ^ data_0 ^
+				    crc_0 ^ crc_2 ^ crc_4 ^ crc_5 ^ crc_7);
+
+	crc_out = (crc_out << 1) |
+		  (data_15 ^ data_14 ^ data_13 ^ data_12 ^ data_9 ^ data_6 ^
+		   data_1 ^ data_0 ^ crc_1 ^ crc_4 ^ crc_5 ^ crc_6 ^ crc_7);
+
+	crc_out = (crc_out << 1) | (data_14 ^ data_12 ^ data_8 ^ data_7 ^
+				    data_6 ^ data_0 ^ crc_0 ^ crc_4 ^ crc_6);
+
+	return crc_out;
+}
+
+/**
+ * @brief Compute the CRC for multiples pairs of channel
+ * @param results - Array of conversion result
+ * @param samples - Number of conversion result
+ * @return The computed CRC
+ */
+static uint8_t crc_channel_pairs(struct ad7616_conversion_result *results,
+				 uint32_t samples)
+{
+	uint8_t crc = 0;
+	uint8_t crc1 = 0;
+
+	for (size_t i = 0; i < samples; i++) {
+		crc1 = crc_channel(results[i].channel_a, crc);
+		crc = crc_channel(results[i].channel_b, crc1);
+	}
+
+	return crc;
+}
+
+/**
+ * @brief Check if the recived CRC is correct
+ * @param results - Array of conversion result
+ * @param samples - Number of conversion result
+ * @param found_crc - CRC recived from the device
+ * @return 0 if the computed CRC is the same as the device, 1 otherwise
+ */
+static int32_t check_crc(struct ad7616_conversion_result *results,
+			 uint32_t samples, uint16_t found_crc)
+{
+	uint8_t computed_crc = crc_channel_pairs(results, samples);
+
+	return !(computed_crc == found_crc);
+}
+
+/**
+ * @brief Enable CRC
+ * @param dev - The device structure.
+ * @return 0 on success, an error code otherwise
+ */
+static int32_t ad7616_enable_crc(struct ad7616_dev *dev)
+{
+	int32_t ret = 0;
+
+	ret = ad7616_write_mask(dev, AD7616_REG_CONFIG, 0b11, 0b11);
+	if (ret != 0)
+		return ret;
+
+	dev->crc = 1;
+
+	return 0;
+}
+
+/**
+ * @brief Perform a toggle on the CONV GPIO and wait for the BUSY GPIO to go low.
+ *        After this, the conversion result are ready for reading
+ * @param dev - The device structure.
+ * @return 0 on success, an error code otherwise
+ */
+static int32_t ad7616_toggle_conv(struct ad7616_dev *dev)
+{
+	int ret;
+	uint8_t value;
+	uint32_t timeout = TOGGLE_DELAY;
+
+	ret = no_os_gpio_direction_input(dev->gpio_busy);
+	if (ret != 0)
+		return ret;
+
+	ret = no_os_gpio_direction_output(dev->gpio_convst, NO_OS_GPIO_HIGH);
+	if (ret != 0)
+		return ret;
+
+	// Waiting for rising edge
+	do {
+		ret = no_os_gpio_get_value(dev->gpio_busy, &value);
+		if (ret != 0)
+			return ret;
+		timeout--;
+	} while (value != NO_OS_GPIO_HIGH && timeout != 0);
+
+	if (!timeout)
+		return -ETIMEDOUT;
+	else
+		timeout = TOGGLE_DELAY;
+
+	ret = no_os_gpio_direction_output(dev->gpio_convst, NO_OS_GPIO_LOW);
+	if (ret != 0)
+		return ret;
+
+	// Waiting for falling edge
+	do {
+		ret = no_os_gpio_get_value(dev->gpio_busy, &value);
+		if (ret != 0)
+			return ret;
+		timeout--;
+	} while (value != NO_OS_GPIO_LOW && timeout != 0);
+
+	if (!timeout)
+		return -ETIMEDOUT;
+
+	return 0;
+}
+
+/**
+ * @brief Reads all conversion results with optional CRC
+ * @param dev - The device structure.
+ * @param res - Array of conversion results. The caller is responsible for allocating enough space
+ * @param crc - Pointer to store the CRC received from the device
+ * @return 0 on success, an error code otherwise
+ */
+static int32_t ad7616_read_channels(struct ad7616_dev *dev,
+				    struct ad7616_conversion_result *res,
+				    uint8_t *crc)
+{
+	int32_t ret;
+	uint32_t read_nb = dev->layers_nb * 2;
+	uint16_t tmp = 0;
+
+	for (uint32_t i = 0; i < read_nb; i++, tmp = 0) {
+		ret = no_os_spi_write_and_read(dev->spi_desc, (void *)&tmp,
+					       sizeof(tmp));
+		if (ret != 0)
+			return ret;
+
+		tmp = __builtin_bswap16(tmp);
+
+		if (i % 2 == 0)
+			res[i / 2].channel_a = tmp;
+		else
+			res[i / 2].channel_b = tmp;
+	}
+
+	// Check CRC
+	if (dev->crc) {
+		ret = no_os_spi_write_and_read(dev->spi_desc, (void *)&tmp,
+					       sizeof(tmp));
+		if (ret != 0)
+			return ret;
+
+		tmp = __builtin_bswap16(tmp);
+
+		*crc = tmp & 0xFF;
+	}
+
+	return 0;
+}
+
+/**
+ * @brief Select a new source for a channel.
+ * @param dev - The device structure.
+ * @param ch - The new channel source
+ * @return 0 on success, an error code otherwise
+ */
+int32_t ad7616_select_channel_source(struct ad7616_dev *dev, enum ad7616_ch ch)
+{
+	int ret;
+	uint16_t mask = 0xF << (ch >= AD7616_VB0 ? 4 : 0);
+	uint16_t data = (ch >= AD7616_VB0 ? (ch - AD7616_VB0) << 4 : ch);
+
+	ret = ad7616_write_mask(dev, AD7616_REG_CHANNEL, mask, data);
+	if (ret != 0)
+		return ret;
+
+	// When changing sources, next conversion is not correct.
+	return ad7616_toggle_conv(dev);
+}
+
+/**
+ * @brief Read the current selected channels.
+ * @param dev - The device structure
+ * @param ch_a - Pointer to store the current source for channel A
+ * @param ch_b - Pointer to store the current source for channel B
+ * @return 0 on success, an error code otherwise
+ */
+int32_t ad7616_read_channel_source(struct ad7616_dev *dev, enum ad7616_ch *ch_a,
+				   enum ad7616_ch *ch_b)
+{
+	uint16_t ret;
+	uint16_t val;
+
+	ret = ad7616_read_mask(dev, AD7616_REG_CHANNEL, 0xFF, &val);
+	if (ret != 0)
+		return ret;
+
+	*ch_a = val & 0xF;
+	*ch_b = (val >> 4) + AD7616_VB0;
+
+	return 0;
+}
 
 /**
  * Read from device.
@@ -60,8 +333,7 @@
  * @param reg_data - The register data.
  * @return 0 in case of success, negative error code otherwise.
  */
-int32_t ad7616_read(struct ad7616_dev *dev,
-		    uint8_t reg_addr,
+int32_t ad7616_read(struct ad7616_dev *dev, uint8_t reg_addr,
 		    uint16_t *reg_data)
 {
 	if (dev->interface == AD7616_SERIAL)
@@ -77,8 +349,7 @@ int32_t ad7616_read(struct ad7616_dev *dev,
  * @param reg_data - The register data.
  * @return 0 in case of success, negative error code otherwise.
  */
-int32_t ad7616_write(struct ad7616_dev *dev,
-		     uint8_t reg_addr,
+int32_t ad7616_write(struct ad7616_dev *dev, uint8_t reg_addr,
 		     uint16_t reg_data)
 {
 	if (dev->interface == AD7616_SERIAL)
@@ -95,10 +366,8 @@ int32_t ad7616_write(struct ad7616_dev *dev,
  * @param data - The register data.
  * @return 0 in case of success, negative error code otherwise.
  */
-int32_t ad7616_read_mask(struct ad7616_dev *dev,
-			 uint8_t reg_addr,
-			 uint16_t mask,
-			 uint16_t *data)
+int32_t ad7616_read_mask(struct ad7616_dev *dev, uint8_t reg_addr,
+			 uint16_t mask, uint16_t *data)
 {
 	uint16_t reg_data;
 	int32_t ret;
@@ -120,10 +389,8 @@ int32_t ad7616_read_mask(struct ad7616_dev *dev,
  * @param data - The register data.
  * @return 0 in case of success, negative error code otherwise.
  */
-int32_t ad7616_write_mask(struct ad7616_dev *dev,
-			  uint8_t reg_addr,
-			  uint16_t mask,
-			  uint16_t data)
+int32_t ad7616_write_mask(struct ad7616_dev *dev, uint8_t reg_addr,
+			  uint16_t mask, uint16_t data)
 {
 	uint16_t reg_data;
 	int32_t ret;
@@ -149,8 +416,7 @@ int32_t ad7616_write_mask(struct ad7616_dev *dev,
  * @param reg_data - The register data.
  * @return 0 in case of success, negative error code otherwise.
  */
-int32_t ad7616_spi_read(struct ad7616_dev *dev,
-			uint8_t reg_addr,
+int32_t ad7616_spi_read(struct ad7616_dev *dev, uint8_t reg_addr,
 			uint16_t *reg_data)
 {
 	uint8_t buf[2];
@@ -175,8 +441,7 @@ int32_t ad7616_spi_read(struct ad7616_dev *dev,
  * @param reg_data - The register data.
  * @return 0 in case of success, negative error code otherwise.
  */
-int32_t ad7616_spi_write(struct ad7616_dev *dev,
-			 uint8_t reg_addr,
+int32_t ad7616_spi_write(struct ad7616_dev *dev, uint8_t reg_addr,
 			 uint16_t reg_data)
 {
 	uint8_t buf[2];
@@ -187,47 +452,6 @@ int32_t ad7616_spi_write(struct ad7616_dev *dev,
 	ret = no_os_spi_write_and_read(dev->spi_desc, buf, 2);
 
 	return ret;
-}
-
-/**
- * PAR read from device.
- * @param dev - The device structure.
- * @param reg_addr - The register address.
- * @param reg_data - The register data.
- * @return 0 in case of success, negative error code otherwise.
- */
-int32_t ad7616_par_read(struct ad7616_dev *dev,
-			uint8_t reg_addr,
-			uint16_t *reg_data)
-{
-	uint32_t read;
-
-	no_os_axi_io_write(dev->core_baseaddr, AD7616_REG_UP_WRITE_DATA,
-			   0x0000 | ((reg_addr & 0x3F) << 9));
-	no_os_udelay(50);
-	no_os_axi_io_read(dev->core_baseaddr, AD7616_REG_UP_READ_DATA, &read);
-	*reg_data = read & 0xFF;
-	no_os_mdelay(1);
-
-	return 0;
-}
-
-/**
- * PAR write to device.
- * @param dev - The device structure.
- * @param reg_addr - The register address.
- * @param reg_data - The register data.
- * @return 0 in case of success, negative error code otherwise.
- */
-int32_t ad7616_par_write(struct ad7616_dev *dev,
-			 uint8_t reg_addr,
-			 uint16_t reg_data)
-{
-	no_os_axi_io_write(dev->core_baseaddr, AD7616_REG_UP_WRITE_DATA,
-			   0x8000 | ((reg_addr & 0x3F) << 9) | (reg_data & 0xFF));
-	no_os_mdelay(1);
-
-	return 0;
 }
 
 /**
@@ -275,13 +499,12 @@ int32_t ad7616_reset(struct ad7616_dev *dev)
  * 								   AD7616_10V
  * @return 0 in case of success, negative error code otherwise.
  */
-int32_t ad7616_set_range(struct ad7616_dev *dev,
-			 enum ad7616_ch ch,
+int32_t ad7616_set_range(struct ad7616_dev *dev, enum ad7616_ch ch,
 			 enum ad7616_range range)
 {
-	uint8_t	reg_addr;
-	uint8_t	mask;
-	uint8_t	data;
+	uint8_t reg_addr;
+	uint8_t mask;
+	uint8_t data;
 	uint8_t i;
 	int32_t ret;
 
@@ -294,19 +517,25 @@ int32_t ad7616_set_range(struct ad7616_dev *dev,
 				data = AD7616_INPUT_RANGE(ch, range);
 			} else {
 				reg_addr = AD7616_REG_INPUT_RANGE_A2;
-				mask = AD7616_INPUT_RANGE(ch - AD7616_VA4, AD7616_10V);
-				data = AD7616_INPUT_RANGE(ch - AD7616_VA4, range);
+				mask = AD7616_INPUT_RANGE(ch - AD7616_VA4,
+							  AD7616_10V);
+				data = AD7616_INPUT_RANGE(ch - AD7616_VA4,
+							  range);
 			}
 		} else {
 			dev->vb[ch - AD7616_VB0] = range;
 			if (ch <= AD7616_VB3) {
 				reg_addr = AD7616_REG_INPUT_RANGE_B1;
-				mask = AD7616_INPUT_RANGE(ch - AD7616_VB0, AD7616_10V);
-				data = AD7616_INPUT_RANGE(ch - AD7616_VB0, range);
+				mask = AD7616_INPUT_RANGE(ch - AD7616_VB0,
+							  AD7616_10V);
+				data = AD7616_INPUT_RANGE(ch - AD7616_VB0,
+							  range);
 			} else {
 				reg_addr = AD7616_REG_INPUT_RANGE_B2;
-				mask = AD7616_INPUT_RANGE(ch - AD7616_VB4, AD7616_10V);
-				data = AD7616_INPUT_RANGE(ch - AD7616_VB4, range);
+				mask = AD7616_INPUT_RANGE(ch - AD7616_VB4,
+							  AD7616_10V);
+				data = AD7616_INPUT_RANGE(ch - AD7616_VB4,
+							  range);
 			}
 		}
 		ret = ad7616_write_mask(dev, reg_addr, mask, data);
@@ -315,8 +544,10 @@ int32_t ad7616_set_range(struct ad7616_dev *dev,
 			dev->va[i] = range;
 			dev->vb[i] = range;
 		}
-		ret = no_os_gpio_set_value(dev->gpio_hw_rngsel0, ((range & 0x01) >> 0));
-		ret |= no_os_gpio_set_value(dev->gpio_hw_rngsel1, ((range & 0x02) >> 1));
+		ret = no_os_gpio_set_value(dev->gpio_hw_rngsel0,
+					   ((range & 0x01) >> 0));
+		ret |= no_os_gpio_set_value(dev->gpio_hw_rngsel1,
+					    ((range & 0x02) >> 1));
 	}
 
 	return ret;
@@ -330,8 +561,7 @@ int32_t ad7616_set_range(struct ad7616_dev *dev,
  * 								  AD7616_HW
  * @return 0 in case of success, negative error code otherwise.
  */
-int32_t ad7616_set_mode(struct ad7616_dev *dev,
-			enum ad7616_mode mode)
+int32_t ad7616_set_mode(struct ad7616_dev *dev, enum ad7616_mode mode)
 {
 	uint8_t i;
 	int32_t ret = 0;
@@ -365,8 +595,8 @@ int32_t ad7616_set_oversampling_ratio(struct ad7616_dev *dev,
 	int32_t ret = 0;
 
 	if (dev->mode == AD7616_SW) {
-		ret = ad7616_write_mask(dev, AD7616_REG_CONFIG,
-					AD7616_OS(0x7), AD7616_OS(osr));
+		ret = ad7616_write_mask(dev, AD7616_REG_CONFIG, AD7616_OS(0x7),
+					AD7616_OS(osr));
 	} else {
 		ret = no_os_gpio_set_value(dev->gpio_os0, ((osr & 0x01) >> 0));
 		ret |= no_os_gpio_set_value(dev->gpio_os1, ((osr & 0x02) >> 1));
@@ -376,20 +606,21 @@ int32_t ad7616_set_oversampling_ratio(struct ad7616_dev *dev,
 	return ret;
 }
 
+#ifdef PLATFORM_ZYNQMP
 /**
  * @brief Read from device in serial mode.
- *        Enter register mode to read/write registers
+ *        Enter register mode to read/write registers.
+ *        specific to Zynqmp platform that use an FPGA
  * @param dev - ad7616_dev device handler.
  * @param buf - data buffer.
  * @param samples - sample number.
  * @return 0 in case of success, -1 otherwise.
  */
-int32_t ad7616_read_data_serial(struct ad7616_dev *dev,
-				uint32_t *buf,
-				uint32_t samples)
+static int32_t ad7616_read_data_serial_zynqmp(struct ad7616_dev *dev,
+		uint32_t *buf, uint32_t samples)
 {
 	int32_t ret;
-	uint32_t commands_data[1] = {0x00};
+	uint32_t commands_data[1] = { 0x00 };
 	struct spi_engine_offload_message msg;
 	uint32_t spi_eng_msg_cmds[3] = {
 		CS_LOW,
@@ -416,12 +647,99 @@ int32_t ad7616_read_data_serial(struct ad7616_dev *dev,
 	if (ret != 0)
 		return ret;
 
-	no_os_axi_io_write(dev->core_baseaddr, AD7616_REG_UP_CTRL, AD7616_CTRL_RESETN);
+	no_os_axi_io_write(dev->core_baseaddr, AD7616_REG_UP_CTRL,
+			   AD7616_CTRL_RESETN);
 
 	if (dev->dcache_invalidate_range)
 		dev->dcache_invalidate_range(msg.rx_addr, samples * 2);
 
 	return ret;
+}
+#endif
+
+/**
+ * @brief Read conversion result from device, checking with CRC if enabled.
+ * @param dev - ad7616_dev device handler.
+ * @param results - results buffer.
+ * @param samples - sample number.
+ * @return 0 in case of success, -1 otherwise.
+ */
+int32_t ad7616_read_data_serial(struct ad7616_dev *dev,
+				struct ad7616_conversion_result *results,
+				uint32_t samples)
+{
+	int32_t ret;
+
+	memset(results, 0, sizeof(*results) * samples);
+
+#ifdef PLATFORM_ZYNQMP
+	return ad7616_read_data_serial_zynqmp(dev, (void *)results, samples)
+#endif
+
+	for (uint32_t i = 0; i < samples; i++) {
+		ret = ad7616_toggle_conv(dev);
+		if (ret != 0)
+			return ret;
+
+		uint8_t crc;
+		ret = ad7616_read_channels(dev, results + (i * dev->layers_nb),
+					   &crc);
+		if (ret)
+			return ret;
+
+		if (dev->crc) {
+			ret = check_crc(results + (i * dev->layers_nb),
+					dev->layers_nb, crc);
+			if (ret) {
+				return ret;
+			}
+		}
+	}
+	return 0;
+}
+
+/**
+ * PAR read from device.
+ * @param dev - The device structure.
+ * @param reg_addr - The register address.
+ * @param reg_data - The register data.
+ * @return 0 in case of success, negative error code otherwise.
+ */
+int32_t ad7616_par_read(struct ad7616_dev *dev, uint8_t reg_addr,
+			uint16_t *reg_data)
+{
+#ifdef PLATFORM_ZYNQMP
+	uint32_t read;
+
+	no_os_axi_io_write(dev->core_baseaddr, AD7616_REG_UP_WRITE_DATA,
+			   0x0000 | ((reg_addr & 0x3F) << 9));
+	no_os_udelay(50);
+	no_os_axi_io_read(dev->core_baseaddr, AD7616_REG_UP_READ_DATA, &read);
+	*reg_data = read & 0xFF;
+	no_os_mdelay(1);
+#endif
+
+	return -ENOSYS;
+}
+
+/**
+ * PAR write to device.
+ * @param dev - The device structure.
+ * @param reg_addr - The register address.
+ * @param reg_data - The register data.
+ * @return 0 in case of success, negative error code otherwise.
+ */
+int32_t ad7616_par_write(struct ad7616_dev *dev, uint8_t reg_addr,
+			 uint16_t reg_data)
+{
+#ifdef PLATFORM_ZYNQMP
+	no_os_axi_io_write(dev->core_baseaddr, AD7616_REG_UP_WRITE_DATA,
+			   0x8000 | ((reg_addr & 0x3F) << 9) |
+			   (reg_data & 0xFF));
+	no_os_mdelay(1);
+#endif
+
+	return -ENOSYS;
 }
 
 /**
@@ -432,27 +750,26 @@ int32_t ad7616_read_data_serial(struct ad7616_dev *dev,
  * @param samples - sample number.
  * @return 0 in case of success, -1 otherwise.
  */
-int32_t ad7616_read_data_parallel(struct ad7616_dev *dev,
-				  uint32_t *buf,
+int32_t ad7616_read_data_parallel(struct ad7616_dev *dev, uint32_t *buf,
 				  uint32_t samples)
 {
+#ifdef PLATFORM_ZYNQMP
 	int32_t ret;
-	struct axi_dmac			*dmac;
-	struct axi_dmac_init	dmac_init;
+	struct axi_dmac *dmac;
+	struct axi_dmac_init dmac_init;
 
 	dmac_init.name = "ADC DMAC";
 	dmac_init.base = dev->offload_init_param->rx_dma_baseaddr;
 	dmac_init.irq_option = IRQ_DISABLED;
 
 	axi_dmac_init(&dmac, &dmac_init);
-	if(!dmac)
+	if (!dmac)
 		return -1;
 
 	no_os_axi_io_write(dev->core_baseaddr, AD7616_REG_UP_CTRL,
 			   AD7616_CTRL_RESETN | AD7616_CTRL_CNVST_EN);
 
-	struct axi_dma_transfer transfer = {
-		// Number of bytes to writen/read
+	struct axi_dma_transfer transfer = { // Number of bytes to writen/read
 		.size = samples,
 		// Transfer done flag
 		.transfer_done = 0,
@@ -468,16 +785,21 @@ int32_t ad7616_read_data_parallel(struct ad7616_dev *dev,
 		return ret;
 	/* Wait until transfer finishes */
 	ret = axi_dmac_transfer_wait_completion(dmac, 500);
-	if(ret)
+	if (ret)
 		return ret;
 	if (dev->dcache_invalidate_range)
 		dev->dcache_invalidate_range((uintptr_t)buf, samples);
 
-	no_os_axi_io_write(dev->core_baseaddr, AD7616_REG_UP_CTRL, AD7616_CTRL_RESETN);
+	no_os_axi_io_write(dev->core_baseaddr, AD7616_REG_UP_CTRL,
+			   AD7616_CTRL_RESETN);
 
 	return 0;
+#endif
+
+	return -ENOSYS;
 }
 
+#ifdef PLATFORM_ZYNQMP
 /**
  * Initialize the AXI_AD7616 IP core device.
  * @param dev - The device structure.
@@ -489,12 +811,14 @@ int32_t ad7616_core_setup(struct ad7616_dev *dev)
 
 	no_os_axi_io_write(dev->core_baseaddr, AD7616_REG_UP_CTRL, 0x00);
 	no_os_mdelay(10);
-	no_os_axi_io_write(dev->core_baseaddr, AD7616_REG_UP_CTRL, AD7616_CTRL_RESETN);
+	no_os_axi_io_write(dev->core_baseaddr, AD7616_REG_UP_CTRL,
+			   AD7616_CTRL_RESETN);
 	no_os_axi_io_write(dev->core_baseaddr, AD7616_REG_UP_CONV_RATE, 100);
 	no_os_axi_io_write(dev->core_baseaddr, AD7616_REG_UP_CTRL,
 			   AD7616_CTRL_RESETN | AD7616_CTRL_CNVST_EN);
 	no_os_mdelay(10);
-	no_os_axi_io_write(dev->core_baseaddr, AD7616_REG_UP_CTRL, AD7616_CTRL_RESETN);
+	no_os_axi_io_write(dev->core_baseaddr, AD7616_REG_UP_CTRL,
+			   AD7616_CTRL_RESETN);
 	no_os_mdelay(10);
 
 	no_os_axi_io_read(dev->core_baseaddr, AD7616_REG_UP_IF_TYPE, &type);
@@ -505,6 +829,95 @@ int32_t ad7616_core_setup(struct ad7616_dev *dev)
 		dev->interface = AD7616_SERIAL;
 
 	return 0;
+}
+#endif
+
+/**
+ * @brief Setup the sequencer layers
+ * @param dev The device structure
+ * @param layers Arrays of layers
+ * @param layers_nb Nubers of items in the layers array.
+ * @param burst 1 if needed, 0 otherwise
+ * @return 0 on success, an error value otherwise
+ */
+int32_t ad7616_setup_sequencer(struct ad7616_dev *dev,
+			       struct ad7616_sequencer_layer *layers,
+			       uint32_t layers_nb, uint8_t burst)
+{
+	int ret;
+	for (uint32_t i = 0; i < layers_nb; i++) {
+		uint16_t data = 0;
+
+		// Last one ?
+		if (i == layers_nb - 1)
+			data |= AD7616_SSREN;
+		data |= (layers[i].ch_b - AD7616_VB0) << 4;
+		data |= layers[i].ch_a;
+
+		ret = ad7616_write(dev, AD7616_REG_SEQUENCER_STACK(i), data);
+		if (ret != 0)
+			return ret;
+	}
+
+	if (burst)
+		ret = ad7616_write_mask(dev, AD7616_REG_CONFIG, AD7616_BURSTEN,
+					AD7616_BURSTEN);
+
+	// Enable channel sequencer
+	ret |= ad7616_write_mask(dev, AD7616_REG_CONFIG, AD7616_SEQEN,
+				 AD7616_SEQEN);
+	if (ret != 0)
+		return ret;
+
+	dev->layers_nb = layers_nb;
+
+	// Dummy CONV pulse as asked in datasheet
+	return ad7616_toggle_conv(dev);
+}
+
+int32_t ad7616_disable_sequencer(struct ad7616_dev *dev)
+{
+	dev->layers_nb = 1;
+	return ad7616_write_mask(dev, AD7616_REG_CONFIG,
+				 AD7616_SEQEN | AD7616_BURSTEN, 0);
+}
+
+/** Self test
+ * @brief Perform a self test. Channels selection will be left untouched
+ * @param dev The device structure
+ * @return 0 in case of success, negative error code otherwise
+ */
+int32_t ad7616_self_test(struct ad7616_dev *dev)
+{
+	int ret;
+	struct ad7616_conversion_result result = { 0 };
+	enum ad7616_ch ch_save[2];
+
+	ret = ad7616_read_channel_source(dev, ch_save, ch_save + 1);
+	if (ret != 0)
+		return ret;
+
+	ret = ad7616_select_channel_source(dev, AD7616_VA_SELF_TEST) ||
+	      ad7616_select_channel_source(dev, AD7616_VB_SELF_TEST);
+	if (ret != 0)
+		goto restore_channels;
+
+	// First toggle to remove pending garbage
+	ret = ad7616_toggle_conv(dev);
+	if (ret != 0)
+		goto restore_channels;
+
+	ret = ad7616_read_data_serial(dev, &result, 1);
+
+restore_channels:
+	ret |= ad7616_select_channel_source(dev, ch_save[0]) ||
+	       ad7616_select_channel_source(dev, ch_save[1]);
+	if (ret != 0)
+		return ret;
+
+	return (result.channel_a == 0xAAAA && result.channel_b == 0x5555) ?
+	       0 :
+	       -EINVAL;
 }
 
 /**
@@ -526,12 +939,15 @@ int32_t ad7616_setup(struct ad7616_dev **device,
 		return -1;
 	}
 
+#ifdef PLATFORM_ZYNQMP
 	dev->core_baseaddr = init_param->core_baseaddr;
 	dev->offload_init_param = init_param->offload_init_param;
 	dev->reg_access_speed = init_param->reg_access_speed;
 	dev->dcache_invalidate_range = init_param->dcache_invalidate_range;
-
 	ad7616_core_setup(dev);
+#else
+	dev->interface = AD7616_SERIAL;
+#endif
 
 	if (dev->interface == AD7616_SERIAL)
 		ret = no_os_spi_init(&dev->spi_desc, init_param->spi_param);
@@ -541,7 +957,9 @@ int32_t ad7616_setup(struct ad7616_dev **device,
 		return ret;
 	}
 
+#ifdef PLATFORM_ZYNQMP
 	spi_engine_set_speed(dev->spi_desc, dev->reg_access_speed);
+#endif
 
 	ret = no_os_gpio_get_optional(&dev->gpio_hw_rngsel0,
 				      init_param->gpio_hw_rngsel0_param);
@@ -553,24 +971,39 @@ int32_t ad7616_setup(struct ad7616_dev **device,
 	if (ret != 0)
 		return ret;
 
-	ret = no_os_gpio_get_optional(&dev->gpio_reset, init_param->gpio_reset_param);
+	ret = no_os_gpio_get_optional(&dev->gpio_reset,
+				      init_param->gpio_reset_param);
 	if (ret != 0)
 		return ret;
 
-	ret = no_os_gpio_get_optional(&dev->gpio_os0, init_param->gpio_os0_param);
+	ret = no_os_gpio_get_optional(&dev->gpio_os0,
+				      init_param->gpio_os0_param);
 	if (ret != 0)
 		return ret;
 
-	ret = no_os_gpio_get_optional(&dev->gpio_os1, init_param->gpio_os1_param);
+	ret = no_os_gpio_get_optional(&dev->gpio_os1,
+				      init_param->gpio_os1_param);
 	if (ret != 0)
 		return ret;
 
-	ret = no_os_gpio_get_optional(&dev->gpio_os2, init_param->gpio_os2_param);
+	ret = no_os_gpio_get_optional(&dev->gpio_os2,
+				      init_param->gpio_os2_param);
+	if (ret != 0)
+		return ret;
+
+	ret = no_os_gpio_get_optional(&dev->gpio_convst,
+				      init_param->gpio_convst_param);
+	if (ret != 0)
+		return ret;
+
+	ret = no_os_gpio_get_optional(&dev->gpio_busy,
+				      init_param->gpio_busy_param);
 	if (ret != 0)
 		return ret;
 
 	if (dev->gpio_reset) {
-		ret = no_os_gpio_direction_output(dev->gpio_reset, NO_OS_GPIO_HIGH);
+		ret = no_os_gpio_direction_output(dev->gpio_reset,
+						  NO_OS_GPIO_HIGH);
 		if (ret != 0)
 			return ret;
 
@@ -584,7 +1017,7 @@ int32_t ad7616_setup(struct ad7616_dev **device,
 		dev->va[i] = init_param->va[i];
 		dev->vb[i] = init_param->vb[i];
 	}
-	ret = ad7616_set_mode(dev, dev->mode);
+	ret = ad7616_set_mode(dev, AD7616_SW);
 	if (ret != 0)
 		return ret;
 
@@ -595,8 +1028,15 @@ int32_t ad7616_setup(struct ad7616_dev **device,
 
 	*device = dev;
 
-	if (!ret)
-		printf("AD7616 successfully initialized\n");
+	dev->layers_nb = 1;
 
-	return ret;
+	if (init_param->crc) {
+		ret = ad7616_enable_crc(dev);
+		if (ret != 0)
+			return ret;
+	} else {
+		dev->crc = 0;
+	}
+
+	return ad7616_self_test(dev);
 }
